@@ -1,0 +1,75 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  codeql-scan:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript"
+
+  manual-security-check:
+    name: Manual Security Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "Scanning for potential hardcoded secrets..."
+          if grep -rn "password\s*=\s*['\"][^'\"]\+['\"]" js/ --include="*.js"; then
+            echo "WARNING: Possible hardcoded password found"
+          else
+            echo "OK: No hardcoded passwords found"
+          fi
+          if grep -rn "api_key\s*=\s*['\"]" js/ --include="*.js"; then
+            echo "WARNING: Possible hardcoded API key found"
+          else
+            echo "OK: No hardcoded API keys found"
+          fi
+
+      - name: Check for unsafe innerHTML usage
+        run: |
+          echo "Scanning for potentially unsafe innerHTML usage..."
+          MATCHES=$(grep -n "innerHTML" js/app.js | wc -l)
+          echo "Found $MATCHES innerHTML usages in app.js"
+          grep -n "innerHTML" js/app.js || true
+          echo "Review above for any unsanitised user input injected via innerHTML."
+
+      - name: Check for eval() usage
+        run: |
+          echo "Scanning for eval() usage..."
+          if grep -n "eval(" js/*.js; then
+            echo "WARNING: eval() found — review for code injection risk"
+          else
+            echo "OK: No eval() usage found"
+          fi
+
+      - name: Summary
+        run: |
+          echo "Security scan complete."
+          echo "Check GitHub Security tab for CodeQL results."
+          echo "Manual checks above show inline findings."
