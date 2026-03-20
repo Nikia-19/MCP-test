@@ -154,7 +154,7 @@ Results visible at: `github.com/your-org/sap-sales-dashboard/security`
 
 ---
 
-## Suggested MCP test prompts for your manager demo
+## Suggested MCP test prompts 
 
 | Prompt | MCP Tools Used |
 |---|---|
